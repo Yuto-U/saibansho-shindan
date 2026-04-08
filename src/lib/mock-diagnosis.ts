@@ -3,7 +3,29 @@
 // or USE_MOCK=true. Same shape as real DiagnosisData.
 // ============================================================
 
-import type { DiagnosisData, Level, CategoryName } from "./diagnose-types";
+import { createHash } from "crypto";
+import type { DiagnosisData, Level, CategoryName, ClassifiedTweet } from "./diagnose-types";
+
+function mockHash(seed: string): string {
+  return createHash("sha256").update(seed).digest("hex");
+}
+
+function buildMockHeatmap(seed: number): number[][] {
+  // Concentrate activity on weekday evenings + late nights for realism
+  const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
+  for (let day = 0; day < 7; day++) {
+    for (let hour = 0; hour < 24; hour++) {
+      let base = 0;
+      if (hour >= 22 || hour < 2) base = 5; // late night spike
+      else if (hour >= 19 && hour < 22) base = 3;
+      else if (hour >= 12 && hour < 14) base = 2;
+      else if (hour >= 6 && hour < 9) base = 1;
+      const noise = ((seed * (day + 1) * (hour + 1)) % 4);
+      grid[day][hour] = Math.max(0, base + noise - 1);
+    }
+  }
+  return grid;
+}
 
 export function generateMockDiagnosis(username: string): DiagnosisData {
   const seed = username.length + username.charCodeAt(0);
@@ -57,7 +79,7 @@ export function generateMockDiagnosis(username: string): DiagnosisData {
       { month: "2月", count: Math.max(2, Math.floor(problemPosts * 0.3)) },
       { month: "3月", count: Math.max(3, Math.floor(problemPosts * 0.5)) },
     ],
-    evidence: [
+    evidence: ([
       {
         tweet_id: "mock_001",
         text: "◯◯は本当に最低なクズ野郎で、こういう人間は社会から消えるべきだと思う。家族ごと不幸になればいい。前科もあるって聞いたし。",
@@ -67,6 +89,7 @@ export function generateMockDiagnosis(username: string): DiagnosisData {
         applicable_law: "刑法230条",
         tags: ["事実摘示", "公然性あり"],
         reasoning: "氏名を特定可能な状態で虚偽の事実を摘示しており、公然と社会的評価を低下させている。",
+        emotion: "anger",
         metrics: { likes: 47, rt: 12, reply: 8 },
       },
       {
@@ -78,6 +101,7 @@ export function generateMockDiagnosis(username: string): DiagnosisData {
         applicable_law: "刑法222条",
         tags: ["害悪の告知", "特定人物宛"],
         reasoning: "身体への害悪を明確に告知しており、相手を威迫する内容。",
+        emotion: "threat",
         metrics: { likes: 8, rt: 1, reply: 3 },
       },
       {
@@ -89,6 +113,7 @@ export function generateMockDiagnosis(username: string): DiagnosisData {
         applicable_law: "刑法231条",
         tags: ["公然性あり", "対象特定可能"],
         reasoning: "事実摘示なく侮辱的表現を公然と発信。",
+        emotion: "contempt",
         metrics: { likes: 23, rt: 5, reply: 4 },
       },
       {
@@ -100,6 +125,7 @@ export function generateMockDiagnosis(username: string): DiagnosisData {
         applicable_law: "民法709条",
         tags: ["私事の暴露", "氏名特定"],
         reasoning: "本人の同意なく氏名・所属・他SNSアカウントを暴露。",
+        emotion: "contempt",
         metrics: { likes: 31, rt: 9, reply: 6 },
       },
       {
@@ -111,6 +137,7 @@ export function generateMockDiagnosis(username: string): DiagnosisData {
         applicable_law: "刑法230条",
         tags: ["虚偽の事実", "業務妨害の疑い"],
         reasoning: "虚偽の事実を疑問形で広めており、社会的評価の低下につながる。",
+        emotion: "mockery",
         metrics: { likes: 19, rt: 4, reply: 2 },
       },
       {
@@ -122,9 +149,21 @@ export function generateMockDiagnosis(username: string): DiagnosisData {
         applicable_law: "刑法231条",
         tags: ["対象特定", "公然性あり"],
         reasoning: "侮辱的表現だが軽度。文脈次第では侮辱罪該当の可能性。",
+        emotion: "mockery",
         metrics: { likes: 6, rt: 0, reply: 1 },
       },
-    ],
+    ] as ClassifiedTweet[]).map((e) => ({
+      ...e,
+      hash: mockHash(`${e.tweet_id}|${e.created_at}|${e.text}`),
+      capturedAt: "2026-04-09T00:00:00.000Z",
+    })),
+    aiSummary:
+      `@${username} の投稿群には、特定の個人を執拗に攻撃する表現が複数見られる傾向がある。` +
+      "深夜帯（22時〜2時）に問題投稿が集中しており、感情の高ぶりやすい時間帯にネガティブな発信を行うパターンが観察された。" +
+      "怒り・侮蔑・嘲笑といった攻撃的感情が支配的で、対象の氏名・所属を匂わせる投稿も含まれる点に注意を要すると見られる。" +
+      "ただし最終的な法的判断は、必ず弁護士の確認が必要である。",
+    emotionProfile: { anger: 38, contempt: 28, mockery: 22, threat: 8, sadness: 4 },
+    timeHeatmap: buildMockHeatmap(seed),
     source: "mock",
     analyzedAt: new Date().toISOString(),
   };

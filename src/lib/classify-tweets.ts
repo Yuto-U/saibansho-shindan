@@ -6,10 +6,11 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { XTweet } from "./x-api";
-import type { ClassifiedTweet, CategoryName, Severity } from "./diagnose-types";
+import type { ClassifiedTweet, CategoryName, Severity, DominantEmotion } from "./diagnose-types";
 
 const MODEL = "claude-haiku-4-5-20251001";
 const BATCH_SIZE = 20;
+const EMOTIONS: DominantEmotion[] = ["anger", "contempt", "mockery", "threat", "sadness"];
 
 const SYSTEM_PROMPT = `あなたは日本の刑法・民法に基づきSNS投稿のリスクを分類する法務アシスタントです。
 各投稿について、以下のいずれかに分類し、重要度と根拠を返してください。
@@ -37,6 +38,7 @@ interface ClassifyOutput {
   applicable_law: string;
   tags: string[];
   reasoning: string;
+  emotion: DominantEmotion;
 }
 
 const TOOL = {
@@ -59,8 +61,13 @@ const TOOL = {
             applicable_law: { type: "string" },
             tags: { type: "array", items: { type: "string" } },
             reasoning: { type: "string" },
+            emotion: {
+              type: "string",
+              enum: EMOTIONS,
+              description: "投稿全体の支配的な感情。anger=怒り, contempt=侮蔑, mockery=嘲笑, threat=脅威, sadness=悲哀",
+            },
           },
-          required: ["tweet_id", "category", "severity", "applicable_law", "tags", "reasoning"],
+          required: ["tweet_id", "category", "severity", "applicable_law", "tags", "reasoning", "emotion"],
         },
       },
     },
@@ -126,6 +133,7 @@ export async function classifyTweets(tweets: XTweet[]): Promise<ClassifiedTweet[
       applicable_law: c?.applicable_law ?? "",
       tags: c?.tags ?? [],
       reasoning: c?.reasoning ?? "",
+      emotion: c?.emotion,
       metrics: {
         likes: t.public_metrics.like_count,
         rt: t.public_metrics.retweet_count,
@@ -133,6 +141,48 @@ export async function classifyTweets(tweets: XTweet[]): Promise<ClassifiedTweet[
       },
     };
   });
+}
+
+/**
+ * Generate a narrative summary of the entire account based on classified tweets.
+ * Returns ~200 chars of plain Japanese text.
+ */
+export async function generateSummary(
+  username: string,
+  classified: ClassifiedTweet[],
+): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
+
+  const client = new Anthropic({ apiKey });
+  const problem = classified.filter((c) => c.severity !== "none");
+  const sample = problem
+    .slice(0, 30)
+    .map((c) => `[${c.category}/${c.severity}] ${c.text.replace(/\s+/g, " ").trim()}`)
+    .join("\n");
+
+  const stats = {
+    total: classified.length,
+    high: problem.filter((c) => c.severity === "high").length,
+    medium: problem.filter((c) => c.severity === "medium").length,
+    low: problem.filter((c) => c.severity === "low").length,
+  };
+
+  const res = await client.messages.create({
+    model: MODEL,
+    max_tokens: 500,
+    system:
+      "あなたは日本のSNS分析レポートを書くアナリストです。投稿傾向の総評を200〜250字の日本語で簡潔にまとめてください。法的判断・断定表現は避け、観察された事実とパターンの記述に留めてください。語尾は「〜と見られる」「〜の傾向がある」などのヘッジ表現を使ってください。",
+    messages: [
+      {
+        role: "user",
+        content: `アカウント: @${username}\n統計: 分析${stats.total}件 / 重要度高${stats.high} 中${stats.medium} 低${stats.low}\n\n問題投稿サンプル:\n${sample || "（問題投稿なし）"}\n\n上記を踏まえて、このアカウントの投稿傾向を200〜250字で総評してください。`,
+      },
+    ],
+  });
+
+  const textBlock = res.content.find((c) => c.type === "text");
+  return textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
 }
 
 export function isClaudeConfigured(): boolean {

@@ -23,6 +23,11 @@ import {
   ExternalLink,
   Loader2,
   BadgeCheck,
+  Brain,
+  Activity,
+  Hash,
+  FileJson,
+  TableProperties,
 } from "lucide-react";
 import type { DiagnosisData, ClassifiedTweet, Severity, Level, CategoryName } from "@/lib/diagnose-types";
 import { AccountProfileCard, generateMockProfile, type AccountProfile } from "@/components/account-profile";
@@ -102,6 +107,53 @@ function ScoreRing({ score, size: SIZE = 124 }: { score: number; size?: number }
         <p className="mt-0.5 text-[10px] font-semibold tracking-wider text-slate-500">/100</p>
       </div>
     </div>
+  );
+}
+
+const EMOTION_META: Record<string, { label: string; color: string; bg: string }> = {
+  anger:    { label: "怒り",   color: "bg-red-500",     bg: "bg-red-100" },
+  contempt: { label: "侮蔑",   color: "bg-amber-500",   bg: "bg-amber-100" },
+  mockery:  { label: "嘲笑",   color: "bg-violet-500",  bg: "bg-violet-100" },
+  threat:   { label: "脅威",   color: "bg-rose-600",    bg: "bg-rose-100" },
+  sadness:  { label: "悲哀",   color: "bg-blue-500",    bg: "bg-blue-100" },
+};
+
+// ============================================================
+// CSV / JSON export helpers (client-side download)
+// ============================================================
+function downloadBlob(filename: string, mime: string, content: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportEvidenceCsv(username: string, data: import("@/lib/diagnose-types").DiagnosisData) {
+  const header = [
+    "id", "tweet_id", "category", "severity", "applicable_law", "emotion",
+    "created_at", "captured_at", "likes", "rt", "reply", "text", "tags", "reasoning", "sha256",
+  ];
+  const rows = (data.evidence ?? []).map((ev, i) => [
+    i + 1, ev.tweet_id, ev.category, ev.severity, ev.applicable_law, ev.emotion ?? "",
+    ev.created_at, ev.capturedAt ?? "",
+    ev.metrics.likes, ev.metrics.rt, ev.metrics.reply,
+    ev.text.replace(/"/g, '""').replace(/\r?\n/g, " "),
+    ev.tags.join("; "),
+    (ev.reasoning ?? "").replace(/"/g, '""').replace(/\r?\n/g, " "),
+    ev.hash ?? "",
+  ]);
+  const csv = "\ufeff" + [header, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+  downloadBlob(`evidence_${username}_${Date.now()}.csv`, "text/csv;charset=utf-8;", csv);
+}
+
+function exportEvidenceJson(username: string, data: import("@/lib/diagnose-types").DiagnosisData) {
+  downloadBlob(
+    `evidence_${username}_${Date.now()}.json`,
+    "application/json;charset=utf-8;",
+    JSON.stringify(data, null, 2),
   );
 }
 
@@ -246,6 +298,82 @@ export function PremiumClient({ username }: { username: string }) {
           </div>
         </div>
 
+        {/* ===== 1.5 PREMIUM — AI総合レポート ===== */}
+        {data.aiSummary && (
+          <div className="mt-5 overflow-hidden rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-50 via-indigo-50 to-white p-5 sm:p-6">
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 shadow-lg shadow-violet-500/30">
+                <Brain className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-violet-600">AI ANALYSIS REPORT</p>
+                <p className="text-[15px] font-extrabold tracking-tight">AI総合レポート</p>
+              </div>
+              <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-violet-200 bg-white/70 px-2.5 py-1 text-[10px] font-bold text-violet-700">
+                <Sparkles className="h-2.5 w-2.5" />
+                PREMIUM
+              </span>
+            </div>
+            <p className="mt-4 rounded-2xl bg-white px-4 py-4 text-[13px] leading-relaxed text-foreground shadow-sm">
+              {data.aiSummary}
+            </p>
+            <p className="mt-2 text-[10px] text-text-muted">
+              ※ AIによる観察結果のサマリーです。法的判断ではありません
+            </p>
+          </div>
+        )}
+
+        {/* ===== 1.6 PREMIUM — Emotion profile ===== */}
+        {data.emotionProfile && (
+          <div className="mt-5 rounded-2xl border border-border bg-white p-5 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-violet-600">EMOTION PROFILE</p>
+                <h3 className="mt-0.5 text-base sm:text-lg font-extrabold tracking-tight">感情プロファイル</h3>
+              </div>
+              <span className="rounded-full bg-violet-50 px-3 py-1 text-[11px] font-bold text-violet-600">
+                AI判定
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] text-text-muted">問題投稿の支配的な感情を5軸で集計</p>
+            <div className="mt-4 space-y-2.5">
+              {(["anger", "contempt", "mockery", "threat", "sadness"] as const).map((key) => {
+                const meta = EMOTION_META[key];
+                const value = data.emotionProfile?.[key] ?? 0;
+                return (
+                  <div key={key} className="flex items-center gap-3">
+                    <span className="w-12 shrink-0 text-[12px] font-bold text-text-sub">{meta.label}</span>
+                    <div className={`flex-1 h-3 overflow-hidden rounded-full ${meta.bg}`}>
+                      <div
+                        className={`h-full rounded-full ${meta.color} animate-fill-bar`}
+                        style={{ width: `${value}%` }}
+                      />
+                    </div>
+                    <span className="w-10 shrink-0 text-right text-[13px] font-extrabold tabular-nums text-text-sub">
+                      {value}<span className="text-[10px] font-medium">%</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ===== 1.7 PREMIUM — Time heatmap ===== */}
+        {data.timeHeatmap && (
+          <div className="mt-5 rounded-2xl border border-border bg-white p-5 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-violet-600">TIME HEATMAP</p>
+                <h3 className="mt-0.5 text-base sm:text-lg font-extrabold tracking-tight">投稿時間帯ヒートマップ</h3>
+              </div>
+              <Activity className="h-5 w-5 text-violet-500" />
+            </div>
+            <p className="mt-1 text-[11px] text-text-muted">投稿が多い曜日・時間帯ほど色が濃くなります</p>
+            <Heatmap grid={data.timeHeatmap} />
+          </div>
+        )}
+
         {/* ===== 2. Categories — same as result ===== */}
         <div className="mt-5 rounded-2xl border border-border bg-white p-5 sm:p-6">
           <h3 className="text-base sm:text-lg font-extrabold tracking-tight">該当する可能性のある法令</h3>
@@ -377,20 +505,49 @@ export function PremiumClient({ username }: { username: string }) {
           )}
         </div>
 
-        {/* ===== 4. PREMIUM EXTENSION — Full evidence list ===== */}
+        {/* ===== 4. PREMIUM — Data export ===== */}
+        <div className="mt-5 rounded-2xl border border-border bg-white p-5 sm:p-6">
+          <div className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/30">
+              <Download className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-600">DATA EXPORT</p>
+              <p className="text-[15px] font-extrabold tracking-tight">弁護士に渡せる形式でダウンロード</p>
+            </div>
+          </div>
+          <p className="mt-3 text-[12px] leading-relaxed text-text-sub">
+            検出された全投稿に <strong>SHA-256ハッシュ</strong> と <strong>取得時刻</strong> を付与した、
+            改ざん検証可能なデータをダウンロードできます。
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-2.5">
+            <button
+              onClick={() => exportEvidenceCsv(data.username, data)}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3 text-[13px] font-extrabold text-text-sub active:scale-[0.97]"
+            >
+              <TableProperties className="h-4 w-4 text-emerald-600" />
+              CSV
+            </button>
+            <button
+              onClick={() => exportEvidenceJson(data.username, data)}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3 text-[13px] font-extrabold text-text-sub active:scale-[0.97]"
+            >
+              <FileJson className="h-4 w-4 text-blue-600" />
+              JSON
+            </button>
+          </div>
+        </div>
+
+        {/* ===== 5. PREMIUM — Full evidence list ===== */}
         <div className="mt-5">
           <div className="mb-3 flex items-end justify-between">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-600">PREMIUM</p>
               <h3 className="mt-1 text-base sm:text-lg font-extrabold tracking-tight">検出された投稿 全{evidence.length}件</h3>
               <p className="mt-0.5 text-[10.5px] text-text-muted">
-                AIによる分類結果。法的判断は弁護士の確認が必要です
+                各投稿に SHA-256 ハッシュ & 取得時刻を付与（改ざん検証可）
               </p>
             </div>
-            <button className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-white px-3 text-[12px] font-bold text-text-sub active:scale-[0.97]">
-              <Download className="h-3.5 w-3.5" />
-              一括DL
-            </button>
           </div>
 
           {evidence.length === 0 ? (
@@ -520,6 +677,54 @@ export function PremiumClient({ username }: { username: string }) {
 }
 
 // ============================================================
+// Heatmap component (7 days × 24 hours)
+// ============================================================
+function Heatmap({ grid }: { grid: number[][] }) {
+  const max = Math.max(1, ...grid.flat());
+  const dayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <div className="inline-block min-w-full">
+        {/* Hour ruler */}
+        <div className="flex items-center gap-[2px] pl-7">
+          {Array.from({ length: 24 }, (_, h) => (
+            <div key={h} className="flex w-3 items-center justify-center text-[8px] text-text-muted">
+              {h % 6 === 0 ? h : ""}
+            </div>
+          ))}
+        </div>
+        {grid.map((row, dayIdx) => (
+          <div key={dayIdx} className="mt-[2px] flex items-center gap-[2px]">
+            <div className="w-6 shrink-0 text-[10px] font-bold text-text-sub">{dayLabels[dayIdx]}</div>
+            <div className="flex gap-[2px]">
+              {row.map((count, hourIdx) => {
+                const intensity = count / max;
+                const opacity = count === 0 ? 0.06 : 0.25 + intensity * 0.75;
+                return (
+                  <div
+                    key={hourIdx}
+                    className="h-3 w-3 rounded-[2px] bg-violet-500"
+                    style={{ opacity }}
+                    title={`${dayLabels[dayIdx]}曜 ${hourIdx}時: ${count}件`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        <div className="mt-3 flex items-center gap-1.5 pl-7">
+          <span className="text-[9px] text-text-muted">少</span>
+          {[0.1, 0.3, 0.5, 0.7, 0.9].map((o) => (
+            <div key={o} className="h-2.5 w-2.5 rounded-[2px] bg-violet-500" style={{ opacity: o }} />
+          ))}
+          <span className="text-[9px] text-text-muted">多</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // Evidence card — one classified problem tweet
 // ============================================================
 function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet; username: string }) {
@@ -557,10 +762,18 @@ function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet;
       </div>
 
       <div className="px-4 py-3.5">
-        <p className="text-[10px] font-medium text-text-muted">
-          <Clock className="mr-1 inline h-3 w-3" />
-          {dateStr}
-        </p>
+        <div className="flex items-center justify-between text-[10px] font-medium text-text-muted">
+          <span>
+            <Clock className="mr-1 inline h-3 w-3" />
+            {dateStr}
+          </span>
+          {ev.emotion && (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${EMOTION_META[ev.emotion]?.bg ?? "bg-slate-100"}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${EMOTION_META[ev.emotion]?.color ?? "bg-slate-400"}`} />
+              {EMOTION_META[ev.emotion]?.label ?? ev.emotion}
+            </span>
+          )}
+        </div>
         <p className="mt-2 rounded-xl bg-surface px-3.5 py-3 text-[13px] leading-relaxed text-foreground">{ev.text}</p>
         {ev.reasoning && (
           <p className="mt-2 text-[11px] leading-relaxed text-text-muted">
@@ -586,6 +799,20 @@ function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet;
             </div>
           )}
         </div>
+        {ev.hash && (
+          <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/50 px-2.5 py-1.5">
+            <p className="flex items-center gap-1 text-[9px] font-bold text-emerald-700">
+              <Hash className="h-2.5 w-2.5" />
+              改ざん防止ハッシュ (SHA-256)
+            </p>
+            <p className="mt-0.5 break-all font-mono text-[9px] text-emerald-800">{ev.hash}</p>
+            {ev.capturedAt && (
+              <p className="mt-0.5 text-[9px] text-emerald-700">
+                取得時刻: {new Date(ev.capturedAt).toLocaleString("ja-JP")}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-px border-t border-border/70 bg-border/50">

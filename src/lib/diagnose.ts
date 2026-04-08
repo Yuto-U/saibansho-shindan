@@ -4,7 +4,7 @@
 // ============================================================
 
 import { getRecentTweets, getUserByUsername, isXConfigured } from "./x-api";
-import { classifyTweets, isClaudeConfigured } from "./classify-tweets";
+import { classifyTweets, generateSummary, isClaudeConfigured } from "./classify-tweets";
 import { buildDiagnosis } from "./score";
 import { generateMockDiagnosis } from "./mock-diagnosis";
 import { getCached, setCached } from "./cache";
@@ -54,6 +54,14 @@ export async function diagnose(
 
   const classified = await classifyTweets(tweets);
   const data = buildDiagnosis(user, tweets, classified);
+
+  // Generate AI summary in parallel-friendly fashion (best effort)
+  try {
+    data.aiSummary = await generateSummary(cleaned, classified);
+  } catch (err) {
+    console.warn("[diagnose] aiSummary generation failed:", err);
+  }
+
   await setCached(cleaned, data);
   return data;
 }

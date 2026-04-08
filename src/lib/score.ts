@@ -2,8 +2,9 @@
 // Score & level computation from classified tweets
 // ============================================================
 
+import { createHash } from "crypto";
 import type { XTweet, XUser } from "./x-api";
-import type { ClassifiedTweet, DiagnosisData, Level, CategoryName } from "./diagnose-types";
+import type { ClassifiedTweet, DiagnosisData, Level, CategoryName, EmotionProfile } from "./diagnose-types";
 
 const SEVERITY_WEIGHT: Record<string, number> = {
   high: 10,
@@ -33,6 +34,43 @@ const HOSTILE_KEYWORDS = [
   "うざい",
   "クソ",
 ];
+
+function buildHeatmap(tweets: XTweet[]): number[][] {
+  // 7 days (Sun..Sat) × 24 hours
+  const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
+  for (const t of tweets) {
+    const d = new Date(t.created_at);
+    if (Number.isNaN(d.getTime())) continue;
+    grid[d.getDay()][d.getHours()] += 1;
+  }
+  return grid;
+}
+
+function aggregateEmotion(classified: ClassifiedTweet[]): EmotionProfile {
+  const counts: EmotionProfile = { anger: 0, contempt: 0, mockery: 0, threat: 0, sadness: 0 };
+  let total = 0;
+  for (const c of classified) {
+    if (c.severity === "none" || !c.emotion) continue;
+    counts[c.emotion] += 1;
+    total += 1;
+  }
+  if (total === 0) return counts;
+  // Normalize to 0-100
+  const k: (keyof EmotionProfile)[] = ["anger", "contempt", "mockery", "threat", "sadness"];
+  for (const key of k) {
+    counts[key] = Math.round((counts[key] / total) * 100);
+  }
+  return counts;
+}
+
+function attachHashes(classified: ClassifiedTweet[]): ClassifiedTweet[] {
+  const capturedAt = new Date().toISOString();
+  return classified.map((c) => ({
+    ...c,
+    hash: createHash("sha256").update(`${c.tweet_id}|${c.created_at}|${c.text}`).digest("hex"),
+    capturedAt,
+  }));
+}
 
 export function buildDiagnosis(
   user: XUser,
@@ -118,7 +156,9 @@ export function buildDiagnosis(
     mentionedUsers,
     hostileKeywords,
     monthlyProblemPosts: monthly,
-    evidence: classified.filter((c) => c.severity !== "none"),
+    evidence: attachHashes(classified.filter((c) => c.severity !== "none")),
+    emotionProfile: aggregateEmotion(classified),
+    timeHeatmap: buildHeatmap(tweets),
     source: "x-api+claude",
     analyzedAt: new Date().toISOString(),
   };
