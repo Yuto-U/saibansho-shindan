@@ -273,7 +273,7 @@ export function DiagnoseClient({ username }: { username: string }) {
           </button>
           <div className="flex items-center gap-1.5">
             <Image src="/logo_icon.png" alt="ロゴ" width={22} height={22} />
-            <span className="text-sm font-extrabold">裁判所行き<span className="text-gradient-blue">診断</span></span>
+            <span className="text-sm font-extrabold">開示請求<span className="text-gradient-blue">診断</span></span>
           </div>
           <button className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-text-sub hover:border-violet-300 hover:text-violet-600">
             <Share2 className="h-3.5 w-3.5" />
@@ -309,7 +309,7 @@ export function DiagnoseClient({ username }: { username: string }) {
 
             {/* Right side: level info */}
             <div className="flex-1 min-w-0 text-center sm:text-left">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">裁判所行きレベル</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">開示請求レベル</p>
               <p className={`mt-1 text-3xl sm:text-4xl font-black leading-tight tracking-tight ${lc.color}`}>{lc.label}</p>
               <p className="mt-2 text-sm leading-relaxed text-slate-400">{lc.desc}</p>
             </div>

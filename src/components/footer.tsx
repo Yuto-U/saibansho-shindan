@@ -7,7 +7,7 @@ export function Footer() {
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
           <div className="flex items-center gap-2">
             <Image src="/logo_icon.png" alt="ロゴ" width={22} height={22} />
-            <span className="text-sm font-bold">裁判所行き診断</span>
+            <span className="text-sm font-bold">開示請求診断</span>
           </div>
 
           <div className="flex flex-wrap justify-center gap-4 text-xs text-text-muted">
@@ -26,7 +26,7 @@ export function Footer() {
         </div>
 
         <p className="mt-4 text-center text-[10px] text-text-muted">
-          &copy; 2026 裁判所行き診断 All rights reserved.
+          &copy; 2026 開示請求診断 All rights reserved.
         </p>
       </div>
     </footer>

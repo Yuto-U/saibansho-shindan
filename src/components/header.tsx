@@ -21,7 +21,7 @@ export function Header() {
         <a href="/about" className="flex items-center gap-2">
           <Image src="/logo_icon.png" alt="ロゴ" width={28} height={28} />
           <span className="text-base font-extrabold tracking-tight text-white">
-            裁判所行き<span className="bg-gradient-to-r from-violet-300 to-indigo-300 bg-clip-text text-transparent">診断</span>
+            開示請求<span className="bg-gradient-to-r from-violet-300 to-indigo-300 bg-clip-text text-transparent">診断</span>
           </span>
         </a>
 

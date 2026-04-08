@@ -35,7 +35,7 @@ export default function Home() {
         <div className="flex items-center gap-2">
           <Image src="/logo_icon.png" alt="ロゴ" width={24} height={24} className="sm:w-7 sm:h-7" />
           <span className="text-sm font-extrabold tracking-tight sm:text-base">
-            裁判所行き<span className="text-gradient-blue">診断</span>
+            開示請求<span className="text-gradient-blue">診断</span>
           </span>
         </div>
         <a
@@ -54,7 +54,7 @@ export default function Home() {
             className="animate-scale-in mx-auto mb-4 flex justify-center sm:mb-6"
             style={{ animationDelay: "0.15s", opacity: 0 }}
           >
-            <Image src="/logo_icon.png" alt="裁判所行き診断" width={56} height={56} className="animate-icon-pulse drop-shadow-md sm:w-[72px] sm:h-[72px]" />
+            <Image src="/logo_icon.png" alt="開示請求診断" width={56} height={56} className="animate-icon-pulse drop-shadow-md sm:w-[72px] sm:h-[72px]" />
           </div>
 
           {/* Title */}
@@ -62,7 +62,7 @@ export default function Home() {
             className="animate-slide-up text-2xl font-extrabold leading-tight tracking-tight sm:text-[2.5rem]"
             style={{ animationDelay: "0.25s", opacity: 0 }}
           >
-            裁判所行き診断
+            開示請求診断
           </h1>
 
           {/* Subtitle */}
@@ -178,7 +178,7 @@ export default function Home() {
           >
             <div className="rounded-xl sm:rounded-2xl border border-border bg-white/60 px-4 py-3 shadow-sm backdrop-blur-sm sm:px-5 sm:py-4">
               <div className="flex items-center justify-between text-[10px] font-semibold text-text-muted sm:text-[11px]">
-                <span>裁判所行きレベル</span>
+                <span>開示請求レベル</span>
                 <span className="flex items-center gap-1">
                   E
                   <span className="mx-1 inline-block h-px w-2.5 bg-text-muted/30 sm:w-3" />

@@ -113,7 +113,7 @@ export function Hero() {
         >
           その誹謗中傷、
           <br />
-          <span className="bg-gradient-to-r from-violet-300 via-indigo-300 to-blue-300 bg-clip-text text-transparent">裁判所行き</span>かも？
+          <span className="bg-gradient-to-r from-violet-300 via-indigo-300 to-blue-300 bg-clip-text text-transparent">開示請求</span>かも？
         </h1>
 
         {/* Subtitle */}
@@ -123,7 +123,7 @@ export function Hero() {
         >
           気になるXアカウントを入力するだけ。
           <br className="hidden sm:block" />
-          独自エンジンが投稿を分析して<strong className="text-white">裁判所行きレベル</strong>を判定します。
+          独自エンジンが投稿を分析して<strong className="text-white">開示請求レベル</strong>を判定します。
         </p>
 
         {/* Search label */}

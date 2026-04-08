@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "裁判所行き診断 | その誹謗中傷、裁けるかも？",
+  title: "開示請求診断 | その誹謗中傷、裁けるかも？",
   description:
     "Xアカウントを入力するだけ。独自エンジンが誹謗中傷の投稿を分析して、法的に裁けるかを無料で診断します。",
   icons: {
@@ -21,15 +21,15 @@ export const metadata: Metadata = {
     apple: "/logo_icon.png",
   },
   openGraph: {
-    title: "裁判所行き診断 | その誹謗中傷、裁けるかも？",
+    title: "開示請求診断 | その誹謗中傷、裁けるかも？",
     description:
-      "Xアカウントを入力するだけ。独自エンジンが誹謗中傷を分析して裁判所行きレベルを無料診断。",
+      "Xアカウントを入力するだけ。独自エンジンが誹謗中傷を分析して開示請求レベルを無料診断。",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "裁判所行き診断",
-    description: "あの人の誹謗中傷、裁判所行きレベルは？無料で診断。",
+    title: "開示請求診断",
+    description: "あの人の誹謗中傷、開示請求レベルは？無料で診断。",
   },
 };
 

@@ -26,7 +26,7 @@ const steps = [
     num: "3",
     icon: FileText,
     title: "レベル判定",
-    description: "裁判所行きレベルをS〜Eで判定",
+    description: "開示請求レベルをS〜Eで判定",
     color: "text-indigo-500",
     bg: "bg-indigo-50",
     border: "border-indigo-100",
