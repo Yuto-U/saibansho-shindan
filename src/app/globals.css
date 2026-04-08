@@ -27,7 +27,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 
 /* Hide scrollbar */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -37,6 +37,35 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* iOS safe area helpers */
+.safe-pt { padding-top: max(env(safe-area-inset-top), 0px); }
+.safe-pb { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
+
+/* Snap scroller for mobile horizontal cards */
+.snap-x-mandatory { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.snap-start { scroll-snap-align: start; }
+
+/* Prevent iOS auto-zoom on input focus (font-size must be >=16px) */
+input, textarea, select { font-size: 16px; }
+@media (min-width: 640px) {
+  input, textarea, select { font-size: inherit; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-slow,
+  .animate-float-reverse,
+  .animate-icon-pulse { animation: none !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ===== Background patterns ===== */

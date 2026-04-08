@@ -40,10 +40,10 @@ export function Hero() {
       {/* Animated orbs */}
       <div className="pointer-events-none absolute inset-0">
         {/* XL orbs — background atmosphere */}
-        <div className="animate-float-slow absolute -top-[5%] -left-[5%] h-[500px] w-[500px] rounded-full bg-violet-600/[0.14] blur-[120px]" />
-        <div className="animate-float-reverse absolute -top-[8%] right-[0%] h-[450px] w-[450px] rounded-full bg-indigo-500/[0.12] blur-[110px]" />
-        <div className="animate-float-slow absolute bottom-[0%] right-[10%] h-[400px] w-[400px] rounded-full bg-blue-600/[0.1] blur-[100px] [animation-delay:3s]" />
-        <div className="animate-float-reverse absolute bottom-[-5%] left-[5%] h-[420px] w-[420px] rounded-full bg-purple-600/[0.08] blur-[110px] [animation-delay:5s]" />
+        <div className="animate-float-slow absolute -top-[5%] -left-[5%] h-[260px] w-[260px] sm:h-[500px] sm:w-[500px] rounded-full bg-violet-600/[0.14] blur-[80px] sm:blur-[120px]" />
+        <div className="animate-float-reverse absolute -top-[8%] right-[0%] h-[240px] w-[240px] sm:h-[450px] sm:w-[450px] rounded-full bg-indigo-500/[0.12] blur-[80px] sm:blur-[110px]" />
+        <div className="animate-float-slow absolute bottom-[0%] right-[10%] h-[220px] w-[220px] sm:h-[400px] sm:w-[400px] rounded-full bg-blue-600/[0.1] blur-[70px] sm:blur-[100px] [animation-delay:3s]" />
+        <div className="animate-float-reverse absolute bottom-[-5%] left-[5%] h-[230px] w-[230px] sm:h-[420px] sm:w-[420px] rounded-full bg-purple-600/[0.08] blur-[80px] sm:blur-[110px] [animation-delay:5s]" />
 
         {/* Large orbs — mid layer */}
         <div className="animate-float-reverse absolute top-[15%] left-[25%] h-[320px] w-[320px] rounded-full bg-fuchsia-500/[0.08] blur-[90px] [animation-delay:1s]" />
