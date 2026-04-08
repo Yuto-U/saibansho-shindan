@@ -242,7 +242,7 @@ export function DiagnoseClient({ username }: { username: string }) {
             {[
               { text: "公開投稿を取得中", delay: "0s" },
               { text: "リプライをスキャン中", delay: "0.8s" },
-              { text: "AIで法的リスクを分析中", delay: "1.6s" },
+              { text: "法的リスクを解析中", delay: "1.6s" },
             ].map((step) => (
               <div key={step.text} className="animate-slide-up flex items-center justify-center gap-2.5 text-sm text-slate-500"
                 style={{ animationDelay: step.delay, opacity: 0 }}>
@@ -445,7 +445,7 @@ export function DiagnoseClient({ username }: { username: string }) {
         {/* ===== 3. Category — 法的根拠を見せる ===== */}
         <div className="mt-3 rounded-2xl border border-border bg-white p-4 sm:p-5">
           <h3 className="text-xs font-bold">該当する可能性のある法令</h3>
-          <p className="mt-1 text-[10px] text-text-muted">※ AIによる分類であり、法的判断ではありません</p>
+          <p className="mt-1 text-[10px] text-text-muted">※ 当サービスによる独自分類であり、法的判断ではありません</p>
           <div className="mt-3 space-y-2.5">
             {result.categories.map((cat) => {
               const pct = result.problemPosts > 0 ? (cat.count / result.problemPosts) * 100 : 0;

@@ -15,7 +15,7 @@ const steps = [
   {
     num: "2",
     icon: Brain,
-    title: "AIが自動分析",
+    title: "独自エンジンで分析",
     description: "投稿・リプライを一括で分析",
     color: "text-violet-500",
     bg: "bg-violet-50",

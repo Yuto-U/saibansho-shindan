@@ -33,7 +33,7 @@ export function generateMockProfile(username: string): AccountProfile {
   return {
     username,
     displayName: `${username}のアカウント`,
-    bio: "このアカウントの投稿内容をAIが分析しています。実際のプロフィール情報はX API連携後に表示されます。",
+    bio: "このアカウントの投稿内容を独自エンジンで解析しています。実際のプロフィール情報はX API連携後に表示されます。",
     url: "",
     isVerified: s % 3 === 0,
     isActive: true,

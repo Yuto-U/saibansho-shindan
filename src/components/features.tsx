@@ -10,8 +10,8 @@ import {
 const features = [
   {
     icon: Brain,
-    title: "AIスコアリング",
-    description: "投稿をAIが分析し、名誉毀損・侮辱・脅迫の可能性を判定。",
+    title: "独自スコアリング",
+    description: "投稿を独自エンジンで解析し、名誉毀損・侮辱・脅迫の可能性を判定。",
     color: "text-blue-500",
     bg: "bg-blue-50",
   },

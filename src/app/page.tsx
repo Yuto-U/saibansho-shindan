@@ -70,7 +70,7 @@ export default function Home() {
             className="animate-slide-up mt-2 text-sm text-text-sub sm:mt-3 sm:text-lg"
             style={{ animationDelay: "0.35s", opacity: 0 }}
           >
-            Xアカウントの誹謗中傷を<strong className="text-foreground">AIで分析</strong>
+            Xアカウントの誹謗中傷を<strong className="text-foreground">独自エンジンで分析</strong>
           </p>
 
           {/* ===== Input form ===== */}

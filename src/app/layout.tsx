@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "裁判所行き診断 | その誹謗中傷、裁けるかも？",
   description:
-    "Xアカウントを入力するだけ。AIが誹謗中傷の投稿を分析して、法的に裁けるかを無料で診断します。",
+    "Xアカウントを入力するだけ。独自エンジンが誹謗中傷の投稿を分析して、法的に裁けるかを無料で診断します。",
   icons: {
     icon: "/logo_icon.png",
     apple: "/logo_icon.png",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "裁判所行き診断 | その誹謗中傷、裁けるかも？",
     description:
-      "Xアカウントを入力するだけ。AIが誹謗中傷を分析して裁判所行きレベルを無料診断。",
+      "Xアカウントを入力するだけ。独自エンジンが誹謗中傷を分析して裁判所行きレベルを無料診断。",
     type: "website",
   },
   twitter: {

@@ -123,7 +123,7 @@ export function Hero() {
         >
           気になるXアカウントを入力するだけ。
           <br className="hidden sm:block" />
-          AIが投稿を分析して<strong className="text-white">裁判所行きレベル</strong>を判定します。
+          独自エンジンが投稿を分析して<strong className="text-white">裁判所行きレベル</strong>を判定します。
         </p>
 
         {/* Search label */}
