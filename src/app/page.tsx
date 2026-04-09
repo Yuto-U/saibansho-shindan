@@ -38,21 +38,12 @@ export default function Home() {
             開示請求<span className="text-gradient-blue">診断</span>
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <a
-            href="/me"
-            className="inline-flex h-9 items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 text-[11px] font-bold text-rose-700 backdrop-blur-sm transition-all active:scale-[0.96] sm:h-10 sm:px-3.5 sm:text-xs"
-          >
-            <Shield className="h-3 w-3" />
-            被害者モード
-          </a>
-          <a
-            href="/about"
-            className="inline-flex h-9 items-center rounded-full border border-border/80 bg-white/70 px-3.5 text-[12px] font-semibold text-text-sub backdrop-blur-sm transition-all active:scale-[0.96] sm:h-10 sm:px-4 sm:text-xs"
-          >
-            サービスについて
-          </a>
-        </div>
+        <a
+          href="/about"
+          className="inline-flex h-9 items-center rounded-full border border-border/80 bg-white/70 px-3.5 text-[12px] font-semibold text-text-sub backdrop-blur-sm transition-all active:scale-[0.96] sm:h-10 sm:px-4 sm:text-xs"
+        >
+          サービスについて
+        </a>
       </header>
 
       {/* ===== Main ===== */}
@@ -144,9 +135,26 @@ export default function Home() {
             ))}
           </div>
 
+          {/* ===== Mission statement ===== */}
+          <div
+            className="animate-fade-in mt-10 sm:mt-12"
+            style={{ animationDelay: "0.85s", opacity: 0 }}
+          >
+            <div className="mx-auto max-w-md rounded-2xl border border-border/70 bg-white/70 px-5 py-4 backdrop-blur-sm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gradient-blue">
+                Our Mission
+              </p>
+              <p className="mt-1.5 text-[13px] font-bold leading-relaxed text-foreground sm:text-sm">
+                被害者を助けると同時に、
+                <br />
+                <span className="text-gradient-blue">加害者を生まないサービス</span>にしたい
+              </p>
+            </div>
+          </div>
+
           {/* ===== Disclosure request benefits ===== */}
           <div
-            className="animate-fade-in mt-12 sm:mt-14"
+            className="animate-fade-in mt-10 sm:mt-12"
             style={{ animationDelay: "1.0s", opacity: 0 }}
           >
             <p className="text-center text-[11px] font-bold uppercase tracking-[0.18em] text-gradient-blue sm:text-xs">
