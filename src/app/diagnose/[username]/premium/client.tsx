@@ -37,6 +37,7 @@ import {
 import { generateConnectedAnalysis, type AttackItem, type AttackerSummary, type ConnectedAnalysis } from "@/lib/x-connected-mock";
 import type { DiagnosisData, ClassifiedTweet, Severity, Level, CategoryName } from "@/lib/diagnose-types";
 import { AccountProfileCard, generateMockProfile, type AccountProfile } from "@/components/account-profile";
+import { AccountAnalysisCard, generateMockAnalysis, type AccountAnalysis } from "@/components/account-analysis";
 
 // ============================================================
 // Local UI building blocks (mirrors the diagnose result page)
@@ -191,6 +192,7 @@ const ATTACKER_LEVEL_GRADIENT: Record<AttackerSummary["estimatedLevel"], string>
 export function PremiumClient({ username }: { username: string }) {
   const [data, setData] = useState<DiagnosisData | null>(null);
   const [profile, setProfile] = useState<AccountProfile | null>(null);
+  const [analysis, setAnalysis] = useState<AccountAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [xConnected, setXConnected] = useState(false);
   const [connectedData, setConnectedData] = useState<ConnectedAnalysis | null>(null);
@@ -230,6 +232,7 @@ export function PremiumClient({ username }: { username: string }) {
         if (json.ok && json.data) {
           setData(json.data);
           setProfile(generateMockProfile(username));
+          setAnalysis(generateMockAnalysis(username));
         } else {
           setError(json.error ?? "分析結果を取得できませんでした");
         }
@@ -663,6 +666,113 @@ export function PremiumClient({ username }: { username: string }) {
           )}
         </div>
 
+        {/* ===== 4.5 What happens to them ===== */}
+        <div className="mt-5 rounded-2xl border border-border bg-white p-5 sm:p-6">
+          <h3 className="text-base sm:text-lg font-extrabold tracking-tight">開示請求すると相手はどうなるか</h3>
+          <p className="mt-1.5 text-xs text-text-muted">※ 一般的な法的手続きの流れに基づく情報です</p>
+
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            {[
+              { icon: "👤", label: "身元が特定", desc: "氏名・住所が\nプロバイダから開示", badge: "確定", tone: "red" },
+              { icon: "💰", label: "慰謝料の支払い", desc: "名誉毀損で\n30〜100万円", badge: "高額", tone: "red" },
+              { icon: "🏢", label: "職場・学校に発覚", desc: "勤務先や学校に\n事実が伝わる", badge: "社会的", tone: "red" },
+              { icon: "⚖️", label: "前科がつく", desc: "侮辱罪は懲役刑あり\n（2022年厳罰化）", badge: "刑事", tone: "red" },
+              { icon: "📄", label: "裁判記録が残る", desc: "判決は公開情報\nネットに名前が残る", badge: "永続", tone: "amber" },
+              { icon: "💸", label: "防御費用が発生", desc: "自身も弁護士を\n雇う必要あり", badge: "出費", tone: "amber" },
+            ].map((item) => {
+              const isRed = item.tone === "red";
+              return (
+                <div
+                  key={item.label}
+                  className={`relative overflow-hidden rounded-2xl border p-4 ${
+                    isRed
+                      ? "border-red-200 bg-gradient-to-br from-red-50 to-rose-50/40"
+                      : "border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/40"
+                  }`}
+                >
+                  <span
+                    className={`absolute right-2.5 top-2.5 rounded-md px-2 py-0.5 text-[10px] font-extrabold ${
+                      isRed ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/90 text-2xl shadow-sm">
+                    {item.icon}
+                  </div>
+                  <p className={`mt-3 text-base font-extrabold tracking-tight ${isRed ? "text-red-800" : "text-amber-900"}`}>
+                    {item.label}
+                  </p>
+                  <p className="mt-1.5 whitespace-pre-line text-xs leading-relaxed text-text-muted">
+                    {item.desc}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-5 rounded-2xl bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100 p-4 text-center">
+            <p className="text-sm font-extrabold text-indigo-900 leading-relaxed">
+              あなたが行動すれば、<br className="sm:hidden" />匿名の加害者に法的責任を取らせることができます
+            </p>
+          </div>
+        </div>
+
+        {/* ===== 4.6 Cost simulation ===== */}
+        <div className="mt-5 rounded-2xl border border-border bg-white p-5 sm:p-6">
+          <h3 className="text-base sm:text-lg font-extrabold tracking-tight">開示請求にかかる費用と賠償金の目安</h3>
+          <p className="mt-1.5 text-xs text-text-muted">※ 一般的な相場であり、個別事案により異なります</p>
+
+          <div className="mt-5 space-y-2.5">
+            <p className="text-xs font-bold text-text-sub">費用の内訳（目安）</p>
+            {[
+              { label: "発信者情報開示請求（弁護士費用）", range: "20〜40万円" },
+              { label: "裁判所手数料・実費", range: "1〜3万円" },
+              { label: "損害賠償請求（弁護士費用）", range: "20〜50万円" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center justify-between rounded-xl bg-surface px-4 py-3">
+                <span className="text-sm text-text-sub flex-1 mr-2">{item.label}</span>
+                <span className="text-sm font-extrabold text-text-sub whitespace-nowrap">{item.range}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-4">
+              <span className="text-base font-extrabold text-indigo-900">合計費用の目安</span>
+              <span className="text-2xl font-black tracking-tight text-indigo-600">40〜90<span className="text-sm">万円</span></span>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-xs font-bold text-text-sub">勝訴した場合の賠償金相場</p>
+            <div className="mt-3 grid grid-cols-2 gap-2.5">
+              {[
+                { category: "名誉毀損", range: "30〜100万円", color: "text-red-600", bg: "bg-red-50", border: "border-red-100" },
+                { category: "侮辱", range: "10〜50万円", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
+                { category: "脅迫", range: "30〜100万円", color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-100" },
+                { category: "プライバシー侵害", range: "10〜80万円", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-100" },
+              ].map((item) => (
+                <div key={item.category} className={`rounded-xl border ${item.border} ${item.bg} p-3.5 text-center`}>
+                  <p className="text-xs font-medium text-text-muted">{item.category}</p>
+                  <p className={`mt-1 text-base font-black tracking-tight ${item.color}`}>{item.range}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-sm font-extrabold text-emerald-900 leading-snug">
+              費用を上回る賠償金を獲得できるケースも多数あります
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-emerald-700">
+              悪質な誹謗中傷の場合、慰謝料に加え弁護士費用・調査費用の一部も相手に請求可能です。
+              まずは弁護士に費用対効果を相談してみましょう。
+            </p>
+          </div>
+
+          <p className="mt-4 text-[10px] leading-relaxed text-text-muted">
+            出典: 裁判所公開データ・弁護士費用の一般的な相場に基づく目安です。実際の費用・賠償額は弁護士にご確認ください。
+          </p>
+        </div>
+
         {/* ===== 5. PREMIUM — PDF templates ===== */}
         <div className="mt-8">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-600">DOCUMENTS</p>
@@ -812,11 +922,16 @@ export function PremiumClient({ username }: { username: string }) {
           </button>
         </div>
 
-        {/* ===== 8. Account profile (de-emphasized, bottom) ===== */}
+        {/* ===== 8. Account profile + analysis (de-emphasized, bottom) ===== */}
         {profile && (
           <div className="mt-8">
             <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-text-muted">アカウント情報</p>
             <AccountProfileCard profile={profile} />
+          </div>
+        )}
+        {analysis && (
+          <div className="mt-5">
+            <AccountAnalysisCard analysis={analysis} />
           </div>
         )}
 
