@@ -20,6 +20,7 @@ import {
   getPendingLink,
 } from "@/lib/line-pending";
 import { recordLead } from "@/lib/leads";
+import { notifyLead } from "@/lib/notify";
 import { isValidXUsername } from "@/lib/parse-username";
 
 export const runtime = "nodejs";
@@ -102,6 +103,14 @@ async function handleEvent(event: LineEvent) {
     queryUsername: safePendingUsername,
     sessionId: null,
     lineUserId: userId,
+  }).catch(() => {});
+
+  // 最重要イベント (友だち追加完了) は Slack 通知も飛ばす。
+  // 弁護士事務所の担当者が即時把握できるよう、line_click と同じ通知導線に乗せる。
+  notifyLead({
+    kind: "line_registered",
+    queryUsername: safePendingUsername,
+    sessionId: null,
   }).catch(() => {});
 
   // Cleanup the pending link after successful delivery — kind に依らず削除。

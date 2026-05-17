@@ -88,9 +88,14 @@ function getSupabase(): SupabaseClient | null {
 }
 
 export async function recordLead(input: LeadInput): Promise<void> {
+  // query_username は case-insensitive で集計したいので、保存時に小文字化して統一する。
+  // 表示用のオリジナルケースは diagnose_cache.profile.username 側で保持される。
+  const normalizedQueryUsername =
+    input.queryUsername ? input.queryUsername.toLowerCase() : null;
+
   const row = {
     kind: input.kind,
-    query_username: input.queryUsername ?? null,
+    query_username: normalizedQueryUsername,
     session_id: input.sessionId ?? null,
     line_user_id: input.lineUserId ?? null,
     x_user_id: input.xUserId ?? null,
@@ -500,7 +505,7 @@ export async function getLeadStats(): Promise<LeadStats> {
 
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  const [diagC, lineClickC, lineRegC, xOauthC, last24C, usernamesRes] = await Promise.all([
+  const [diagC, lineClickC, lineRegC, xOauthC, last24C, uniqueRpc] = await Promise.all([
     sb.from("leads").select("id", { count: "exact", head: true }).eq("kind", "diagnose"),
     sb.from("leads").select("id", { count: "exact", head: true }).eq("kind", "line_click"),
     sb.from("leads").select("id", { count: "exact", head: true }).eq("kind", "line_registered"),
@@ -510,26 +515,44 @@ export async function getLeadStats(): Promise<LeadStats> {
       .select("id", { count: "exact", head: true })
       .eq("kind", "diagnose")
       .gte("created_at", dayAgo),
-    sb
+    // Postgres 側で count(distinct ...) する。schema.sql に同名 function を定義済み。
+    // function 未デプロイ環境では rpc がエラーを返すので、その時のみ
+    // フォールバック (50000件まで取得して Set 化) に降りる。
+    sb.rpc("get_unique_diagnose_username_count"),
+  ]);
+
+  let uniqueUsernames = 0;
+  if (!uniqueRpc.error && typeof uniqueRpc.data === "number") {
+    uniqueUsernames = uniqueRpc.data;
+  } else if (!uniqueRpc.error && typeof uniqueRpc.data === "string") {
+    // bigint は driver によって string で返ることがあるため両対応
+    uniqueUsernames = Number(uniqueRpc.data) || 0;
+  } else {
+    // フォールバック: function 未デプロイ環境 (旧 schema) でも動かす
+    console.warn(
+      "[leads] get_unique_diagnose_username_count rpc failed, falling back to client-side dedup:",
+      uniqueRpc.error?.message,
+    );
+    const fallback = await sb
       .from("leads")
       .select("query_username")
       .eq("kind", "diagnose")
       .not("query_username", "is", null)
-      .limit(5000),
-  ]);
-
-  const unique = new Set(
-    ((usernamesRes.data ?? []) as { query_username: string | null }[])
-      .map((r) => r.query_username)
-      .filter((x): x is string => Boolean(x)),
-  );
+      .limit(50_000);
+    const set = new Set(
+      ((fallback.data ?? []) as { query_username: string | null }[])
+        .map((r) => r.query_username)
+        .filter((x): x is string => Boolean(x)),
+    );
+    uniqueUsernames = set.size;
+  }
 
   return {
     totalDiagnose: diagC.count ?? 0,
     totalLineClick: lineClickC.count ?? 0,
     totalLineRegistered: lineRegC.count ?? 0,
     totalXOauth: xOauthC.count ?? 0,
-    uniqueUsernames: unique.size,
+    uniqueUsernames,
     last24hDiagnose: last24C.count ?? 0,
   };
 }

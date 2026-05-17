@@ -155,9 +155,26 @@ export async function classifyTweets(
   const client = new Anthropic({ apiKey });
   const batches = chunk(tweets, BATCH_SIZE);
 
-  // Process batches in parallel (Claude rate limits are generous for Haiku)
-  const results = await Promise.all(batches.map((b) => classifyBatch(client, b, ctx)));
-  const flat = results.flat();
+  // バッチを並列で実行する。1バッチが失敗しても診断全体は止めず、
+  // 該当バッチのツイートは「該当なし/none」として扱う (後段の byId.get で未ヒットになる)。
+  const settled = await Promise.allSettled(
+    batches.map((b) => classifyBatch(client, b, ctx)),
+  );
+  const flat: ClassifyOutput[] = [];
+  let failedBatches = 0;
+  for (const r of settled) {
+    if (r.status === "fulfilled") {
+      flat.push(...r.value);
+    } else {
+      failedBatches += 1;
+      console.warn("[classify-tweets] batch failed:", r.reason);
+    }
+  }
+  if (failedBatches > 0) {
+    console.warn(
+      `[classify-tweets] ${failedBatches}/${batches.length} batches failed; partial result returned`,
+    );
+  }
 
   // Map back to ClassifiedTweet (joined with original tweet metadata)
   const byId = new Map(flat.map((r) => [r.tweet_id, r]));

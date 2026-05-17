@@ -112,7 +112,24 @@ create index if not exists line_pending_links_created_at_idx
 alter table line_pending_links enable row level security;
 
 -- ------------------------------------------------------------
--- 5. 便利 View: キャンペーン別リード数
+-- 5. 集計関数: ユニーク診断対象アカウント数
+--    管理画面 KPI の uniqueUsernames を Postgres 側で集計する。
+--    クライアント側で .limit() してから Set 化する旧方式は、診断件数が
+--    増えると上限で頭打ちになるためこの function に置き換える。
+-- ------------------------------------------------------------
+create or replace function get_unique_diagnose_username_count()
+returns bigint
+language sql
+stable
+as $$
+  select count(distinct query_username)
+  from leads
+  where kind = 'diagnose'
+    and query_username is not null;
+$$;
+
+-- ------------------------------------------------------------
+-- 6. 便利 View: キャンペーン別リード数
 -- ------------------------------------------------------------
 create or replace view leads_by_campaign as
 select

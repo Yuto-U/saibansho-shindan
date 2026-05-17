@@ -19,11 +19,11 @@ export const runtime = "nodejs";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
-/** `?mock=1` is always allowed: mock data is harmless (no leads recording,
- *  no X / Claude calls, no cache writes), so we let admins use it in prod
- *  to preview the UI without burning credits. */
+/** `?mock=1` は開発/プレビュー環境でのみ有効。
+ *  本番で許可するとサイトの信頼性を損なう (架空の診断結果が SNS でシェアされ得る)。
+ *  本番でUIプレビューが必要な場合は Basic 認証付きの /admin/preview を使う。 */
 function isMockQueryAllowed(): boolean {
-  return true;
+  return !IS_PROD;
 }
 
 function ensureSessionId(req: NextRequest): { sid: string; isNew: boolean } {
@@ -59,7 +59,8 @@ export async function GET(
 
   // ----- 入力検証: X 公式仕様 (半角英数字 + アンダースコア、1〜15文字) -----
   // 全角日本語などをハンドルとして弾き、存在しないアカウントの診断記録を防ぐ。
-  const normalizedUsername = username.replace(/^@/, "").trim();
+  // X username は case-insensitive のため小文字化してキャッシュキー・リード集計を統一する。
+  const normalizedUsername = username.replace(/^@/, "").trim().toLowerCase();
   if (!isValidXUsername(normalizedUsername)) {
     const res = NextResponse.json<DiagnosisResponse>(
       {
