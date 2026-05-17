@@ -247,19 +247,61 @@ function formatYmdJst(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-export async function getDailySeries(days = 30): Promise<DailyPoint[]> {
+/**
+ * 日次の diagnose / line_click 件数。
+ *
+ * @param days  数値なら直近N日。"all" なら最古レコードから今日まで（KPIと整合する全期間表示）。
+ *
+ * JST 日付でバケットを切るため、since は UTC で1日広めに取得して境界の取りこぼしを防ぐ。
+ */
+export async function getDailySeries(days: number | "all" = 30): Promise<DailyPoint[]> {
   const now = new Date();
-  const since = new Date(now.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
+  const sb = getSupabase();
 
-  // 日付ごとの空バケットを作る
-  const buckets = new Map<string, DailyPoint>();
-  for (let i = 0; i < days; i++) {
-    const d = new Date(since.getTime() + i * 24 * 60 * 60 * 1000);
-    const key = formatYmdJst(d);
-    buckets.set(key, { date: key, diagnose: 0, lineClick: 0 });
+  // ----- 開始日の決定 -----
+  let sinceMs: number;
+  if (days === "all") {
+    // 最古の diagnose/line_click レコードを取得して、そこから今日まで
+    if (sb) {
+      const { data: oldest } = await sb
+        .from("leads")
+        .select("created_at")
+        .in("kind", ["diagnose", "line_click"])
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      sinceMs = oldest
+        ? new Date((oldest as { created_at: string }).created_at).getTime()
+        : now.getTime() - 29 * 24 * 60 * 60 * 1000;
+    } else {
+      const times = memStore.map((r) => new Date(r.created_at).getTime()).filter((n) => !Number.isNaN(n));
+      sinceMs = times.length > 0 ? Math.min(...times) : now.getTime() - 29 * 24 * 60 * 60 * 1000;
+    }
+  } else {
+    sinceMs = now.getTime() - (days - 1) * 24 * 60 * 60 * 1000;
   }
 
-  const sb = getSupabase();
+  // ----- バケット生成 (JST 日付ベース) -----
+  // since と now を JST 日付として比較し、その間の全日のキーを作る。
+  const buckets = new Map<string, DailyPoint>();
+  const startKey = formatYmdJst(new Date(sinceMs));
+  const endKey = formatYmdJst(now);
+  // sinceMs から1日ずつ進めて endKey に到達するまで埋める
+  let cursor = sinceMs;
+  // セーフティ: 最大2年分まで (≒730 日)
+  for (let i = 0; i < 730; i++) {
+    const key = formatYmdJst(new Date(cursor));
+    if (!buckets.has(key)) {
+      buckets.set(key, { date: key, diagnose: 0, lineClick: 0 });
+    }
+    if (key >= endKey) break;
+    cursor += 24 * 60 * 60 * 1000;
+  }
+
+  // ----- データ取得 -----
+  // JST 境界をまたぐ取りこぼしを防ぐため、24時間広めに取得する。
+  const fetchSinceIso = new Date(sinceMs - 24 * 60 * 60 * 1000).toISOString();
+
   if (!sb) {
     for (const r of memStore) {
       const key = formatYmdJst(new Date(r.created_at));
@@ -268,15 +310,19 @@ export async function getDailySeries(days = 30): Promise<DailyPoint[]> {
       if (r.kind === "diagnose") b.diagnose += 1;
       else if (r.kind === "line_click") b.lineClick += 1;
     }
-    return [...buckets.values()];
+    return [...buckets.values()].sort((a, b) => a.date.localeCompare(b.date));
   }
 
   const { data, error } = await sb
     .from("leads")
     .select("kind, created_at")
-    .gte("created_at", since.toISOString())
+    .gte("created_at", fetchSinceIso)
+    .in("kind", ["diagnose", "line_click"])
     .limit(50_000);
-  if (error || !data) return [...buckets.values()];
+  if (error || !data) {
+    console.warn("[leads] getDailySeries fetch failed:", error?.message);
+    return [...buckets.values()].sort((a, b) => a.date.localeCompare(b.date));
+  }
 
   for (const r of data as { kind: LeadKind; created_at: string }[]) {
     const key = formatYmdJst(new Date(r.created_at));
@@ -285,7 +331,7 @@ export async function getDailySeries(days = 30): Promise<DailyPoint[]> {
     if (r.kind === "diagnose") b.diagnose += 1;
     else if (r.kind === "line_click") b.lineClick += 1;
   }
-  return [...buckets.values()];
+  return [...buckets.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export interface CampaignStat {
@@ -442,7 +488,10 @@ export async function getDiagnoseRanking(
 export async function getInsightsTrend(
   period: InsightsPeriod,
 ): Promise<DailyPoint[]> {
-  const days = period === "24h" ? 1 : period === "7d" ? 7 : period === "30d" ? 30 : 90;
+  // "all" は最古レコードから今日までの動的範囲で集計する。
+  // 固定の90日だと「全期間」と謳いながら範囲外のデータが落ちるため。
+  if (period === "all") return getDailySeries("all");
+  const days = period === "24h" ? 1 : period === "7d" ? 7 : 30;
   return getDailySeries(days);
 }
 

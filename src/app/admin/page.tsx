@@ -75,8 +75,17 @@ export default async function AdminDashboardPage() {
       listLeads({ kind: "x_oauth", limit: 20 }),
       getLinePendingLinks(50),
       getCampaignStats(8),
-      getDailySeries(30),
+      getDailySeries("all"),
     ]);
+
+  // 期間内合計 (KPIと突き合わせやすくするため画面にも出す)
+  const seriesTotals = series.reduce(
+    (acc, p) => ({ diagnose: acc.diagnose + p.diagnose, lineClick: acc.lineClick + p.lineClick }),
+    { diagnose: 0, lineClick: 0 },
+  );
+  const seriesRange = series.length > 0
+    ? { from: series[0].date, to: series[series.length - 1].date, days: series.length }
+    : { from: "", to: "", days: 0 };
 
   const topCampaignDiagnoses = Math.max(1, ...campaigns.map((c) => c.diagnoses));
 
@@ -182,11 +191,27 @@ export default async function AdminDashboardPage() {
         ))}
       </section>
 
-      {/* Daily trend chart */}
+      {/* Daily trend chart — 最古レコードから今日までを表示。KPIと整合する */}
       <section>
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-extrabold">日次トレンド (過去30日)</h2>
-          <span className="text-[10px] text-slate-400">JST基準</span>
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <h2 className="text-sm font-extrabold">
+            日次トレンド
+            {seriesRange.days > 0 && (
+              <span className="ml-2 text-[11px] font-medium text-slate-500">
+                ({seriesRange.from} 〜 {seriesRange.to} / {seriesRange.days}日)
+              </span>
+            )}
+          </h2>
+          <div className="flex items-center gap-3 text-[11px]">
+            <span className="font-semibold">
+              <span className="text-slate-500">期間内 診断: </span>
+              <span className="text-violet-600">{fmt(seriesTotals.diagnose)}</span>
+              <span className="mx-1 text-slate-300">/</span>
+              <span className="text-slate-500">LINEクリック: </span>
+              <span className="text-[#06c755]">{fmt(seriesTotals.lineClick)}</span>
+            </span>
+            <span className="text-[10px] text-slate-400">JST基準</span>
+          </div>
         </div>
         <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4">
           <DailyChart data={series} />
