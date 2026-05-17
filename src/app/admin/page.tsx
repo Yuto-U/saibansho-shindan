@@ -91,12 +91,49 @@ export default async function AdminDashboardPage() {
   const linkHandles = lineLinks.map((l) => l.pending_username ?? "").filter(Boolean);
   const profiles = await getProfileSnapshots([...eventHandles, ...linkHandles]);
 
+  // 各カードに href を持たせてドリルダウン可能にする。
+  // ユニーク X アカウントだけは重複除外なので /admin/insights、それ以外は kind フィルタ付き一覧へ。
   const kpis = [
-    { label: "総診断数", value: fmt(stats.totalDiagnose), sub: `直近24h: ${fmt(stats.last24hDiagnose)}`, accent: "text-violet-600" },
-    { label: "ユニークXアカウント", value: fmt(stats.uniqueUsernames), sub: "重複除外ベース", accent: "text-indigo-600" },
-    { label: "LINEクリック", value: fmt(stats.totalLineClick), sub: "リードの入口", accent: "text-[#06c755]" },
-    { label: "LINE登録 (Webhook)", value: fmt(stats.totalLineRegistered), sub: "follow イベント受信", accent: "text-emerald-600" },
-    { label: "X OAuth 連携", value: fmt(stats.totalXOauth), sub: "premium アクセス可", accent: "text-slate-700" },
+    {
+      label: "総診断数",
+      value: fmt(stats.totalDiagnose),
+      sub: `直近24h: ${fmt(stats.last24hDiagnose)}`,
+      accent: "text-violet-600",
+      href: "/admin/leads?kind=diagnose",
+      ariaLabel: "総診断数の一覧を表示",
+    },
+    {
+      label: "ユニークXアカウント",
+      value: fmt(stats.uniqueUsernames),
+      sub: "重複除外ベース",
+      accent: "text-indigo-600",
+      href: "/admin/insights?period=all",
+      ariaLabel: "ユニークXアカウントのランキングを表示",
+    },
+    {
+      label: "LINEクリック",
+      value: fmt(stats.totalLineClick),
+      sub: "リードの入口",
+      accent: "text-[#06c755]",
+      href: "/admin/leads?kind=line_click",
+      ariaLabel: "LINEクリックの一覧を表示",
+    },
+    {
+      label: "LINE登録 (Webhook)",
+      value: fmt(stats.totalLineRegistered),
+      sub: "follow イベント受信",
+      accent: "text-emerald-600",
+      href: "/admin/leads?kind=line_registered",
+      ariaLabel: "LINE登録の一覧を表示",
+    },
+    {
+      label: "X OAuth 連携",
+      value: fmt(stats.totalXOauth),
+      sub: "premium アクセス可",
+      accent: "text-slate-700",
+      href: "/admin/leads?kind=x_oauth",
+      ariaLabel: "X OAuth連携の一覧を表示",
+    },
   ];
 
   return (
@@ -122,14 +159,26 @@ export default async function AdminDashboardPage() {
         </div>
       )}
 
-      {/* KPI cards */}
+      {/* KPI cards — クリックで該当一覧/インサイトへドリルダウン */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {kpis.map((k) => (
-          <div key={k.label} className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="text-[11px] font-semibold text-slate-500">{k.label}</p>
+          <Link
+            key={k.label}
+            href={k.href}
+            aria-label={k.ariaLabel}
+            className="group block rounded-xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+          >
+            <p className="text-[11px] font-semibold text-slate-500 group-hover:text-violet-600">
+              {k.label}
+            </p>
             <p className={`mt-1 text-2xl font-black tracking-tight ${k.accent}`}>{k.value}</p>
-            <p className="mt-1 text-[10px] text-slate-400">{k.sub}</p>
-          </div>
+            <p className="mt-1 text-[10px] text-slate-400 group-hover:text-slate-500">
+              {k.sub}
+              <span className="ml-1 text-violet-500 opacity-0 transition group-hover:opacity-100">
+                →
+              </span>
+            </p>
+          </Link>
         ))}
       </section>
 
