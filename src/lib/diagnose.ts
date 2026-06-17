@@ -7,7 +7,9 @@ import {
   getRecentTweetsWithIncludes,
   getUserByUsername,
   isXConfigured,
+  isXServiceError,
 } from "./x-api";
+import type { UserLookupResult, XTweetsResponse } from "./x-api";
 import { classifyTweets, generateSummary, isClaudeConfigured } from "./classify-tweets";
 import { buildDiagnosis } from "./score";
 import { generateMockDiagnosis } from "./mock-diagnosis";
@@ -74,9 +76,31 @@ export async function diagnose(
   // Fresh analysis. Pinned tweet comes back inline via `expansions=pinned_tweet_id`
   // on the user lookup, so this is still just two billable X API calls
   // (user lookup + timeline) — same as before.
-  const { user, pinnedTweet } = await getUserByUsername(cleaned);
-  const { tweets, mediaByKey, referencedById, usersById } =
-    await getRecentTweetsWithIncludes(user.id, 100);
+  //
+  // 認証・契約レベルの X API エラー (401/403/429) は「ユーザーのアカウントに
+  // 問題がある」のではなく「こちらのトークン/契約が切れている」サービス側障害。
+  // 生の "X API 401: {...}" を露出させず、運用者が気付ける形でログを残しつつ
+  // ユーザーには分かりやすいメッセージを返す (route 側で 503 にマップ)。
+  let userLookup: UserLookupResult;
+  let timeline: XTweetsResponse;
+  try {
+    userLookup = await getUserByUsername(cleaned);
+    timeline = await getRecentTweetsWithIncludes(userLookup.user.id, 100);
+  } catch (err) {
+    if (isXServiceError(err)) {
+      console.error(
+        `[diagnose] X API service error (status=${err.status}). ` +
+          `X_BEARER_TOKEN の失効 / Basic tier 契約切れ / レート制限の可能性。`,
+        err.message,
+      );
+      throw new DiagnoseConfigError(
+        "ただいま診断が混み合っているか、一時的に利用できません。時間をおいて再度お試しください。",
+      );
+    }
+    throw err;
+  }
+  const { user, pinnedTweet } = userLookup;
+  const { tweets, mediaByKey, referencedById, usersById } = timeline;
 
   if (tweets.length === 0) {
     // Empty timeline → return a low-risk diagnosis

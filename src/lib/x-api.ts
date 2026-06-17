@@ -125,11 +125,25 @@ export interface XTweetsResponse {
   usersById: Map<string, XUser>;
 }
 
-class XApiError extends Error {
+export class XApiError extends Error {
   constructor(message: string, public status?: number) {
     super(message);
     this.name = "XApiError";
   }
+}
+
+/**
+ * 認証情報・契約レベルの問題で X API が利用できない状態かどうか。
+ *   - 401 Unauthorized: Bearer トークンが無効・失効・誤設定
+ *   - 403 Forbidden:    Basic tier 契約切れ / アプリ権限不足
+ *   - 429 Too Many:     X 側のレート制限超過
+ * いずれもユーザー側の操作では解消できない「サービス側の問題」。
+ */
+export function isXServiceError(err: unknown): err is XApiError {
+  return (
+    err instanceof XApiError &&
+    (err.status === 401 || err.status === 403 || err.status === 429)
+  );
 }
 
 function getBearer(): string {
