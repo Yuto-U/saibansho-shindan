@@ -40,7 +40,7 @@ alter table line_pending_links enable row level security;
 LINE Developers Console → Provider「kaiji-shindan」→ Channel「開示請求診断」(Messaging API) → 上部タブ「Messaging API設定」
 
 ```
-Webhook URL: https://saibansho-shindan.vercel.app/api/webhook/line
+Webhook URL: https://kaiji-shindan.com/api/webhook/line
 Use webhook: ON
 ```
 

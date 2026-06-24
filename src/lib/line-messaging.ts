@@ -109,6 +109,6 @@ export function validateLineSignature(rawBody: string, signature: string | null)
 export function getPublicSiteUrl(): string {
   return (
     process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://saibansho-shindan.vercel.app"
+    "https://kaiji-shindan.com"
   );
 }
