@@ -70,12 +70,10 @@ function formatSlackBlocks(p: NotifyPayload) {
 }
 
 /** Fire-and-forget. Never throws. Never blocks the caller. */
-export async function notifyLead(p: NotifyPayload): Promise<void> {
+async function postWebhooks(payload: unknown): Promise<void> {
   const slackUrl = process.env.SLACK_WEBHOOK_URL;
   const genericUrl = process.env.NOTIFY_WEBHOOK_URL;
   if (!slackUrl && !genericUrl) return;
-
-  const payload = formatSlackBlocks(p);
 
   const targets: string[] = [];
   if (slackUrl) targets.push(slackUrl);
@@ -92,4 +90,13 @@ export async function notifyLead(p: NotifyPayload): Promise<void> {
       }).catch(() => {}),
     ),
   );
+}
+
+export async function notifyLead(p: NotifyPayload): Promise<void> {
+  await postWebhooks(formatSlackBlocks(p));
+}
+
+/** 障害アラート等のプレーンテキスト通知。Webhook 未設定なら何もしない。 */
+export async function notifyText(text: string): Promise<void> {
+  await postWebhooks({ text });
 }

@@ -186,8 +186,35 @@ https://（本番ドメイン）/api/auth/x/callback
 |---|---|
 | X API Basic tier の審査が通らない | サポートに連絡。それまで Free tier で動作確認のみ |
 | Supabase 無料 tier の制限到達 | 有料 ($25/月) にアップグレード |
+| **Supabase プロジェクトが自動停止（pause）** | 下記「DB 接続断」を参照 |
 | ドメインの DNS 反映が遅い | Vercel の `*.vercel.app` URL でソフトローンチ可（後でドメイン切替） |
 | LINE 友だち追加 URL が出ない | LINE Business 認証が完了するまで待つ |
+
+---
+
+# DB 接続断（Supabase pause）
+
+## 症状
+- `/admin` の数値が全て 0、リード一覧が空
+- Vercel のログに `[leads] insert failed: TypeError: fetch failed` / `[cache] setCached failed: ... fetch failed`
+- サイト自体は動く（診断も返る）ため**気付きにくい**。その間リードは1件も保存されず、キャッシュも効かないので X API と Claude API の課金だけ増える
+
+## 原因
+Supabase Free plan は一定期間 DB アクセスが無いとプロジェクトを自動停止する。
+さらに Free plan は「Owner / Administrator として所属する全組織を横断して稼働プロジェクト2つまで」の上限があり、
+**上限に達していると停止したプロジェクトを再開できない**（2026-08-13 に発生。teco-group 組織の Administrator 権限が
+枠を2つ消費していたため、Developer に降格してもらって復旧した）。
+
+## 復旧手順
+1. https://supabase.com/dashboard → 該当プロジェクトが `paused` か確認
+2. `Resume project` → 数分〜で復旧（データは保持される）
+3. 上限エラーが出る場合は、他プロジェクトを pause / 削除する、所属組織での自分のロールを Developer に下げる、
+   または該当組織を Pro（$25/月）にアップグレードする
+4. 復旧後に `/api/cron/keep-alive` を叩き `{"ok":true}` を確認
+
+## 再発防止
+- `vercel.json` の cron で `/api/cron/keep-alive` を毎日 03:00 UTC（12:00 JST）に実行し、無操作による自動停止を防ぐ
+- `SLACK_WEBHOOK_URL` を設定しておくと、keep-alive が失敗した時点でアラートが飛ぶ（未設定だとログにしか出ない）
 
 ---
 

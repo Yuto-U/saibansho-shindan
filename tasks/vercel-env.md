@@ -26,7 +26,8 @@ Vercel ダッシュボード → プロジェクト → Settings → Environment
 
 | 変数名 | 値の例 | 用途 |
 |---|---|---|
-| `SLACK_WEBHOOK_URL` | `https://hooks.slack.com/...` | 新規リード通知 |
+| `SLACK_WEBHOOK_URL` | `https://hooks.slack.com/...` | 新規リード通知＋**DB接続断アラート**（keep-alive cron が失敗したら飛ぶ） |
+| `CRON_SECRET` | （32文字以上のランダム） | `/api/cron/keep-alive` を Vercel Cron からのみ叩けるようにする。未設定でも cron は動く |
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | `kaiji-shindan.jp` | アクセス解析（プライバシー重視） |
 
 ## 🟢 任意（Phase 2 で使用）
