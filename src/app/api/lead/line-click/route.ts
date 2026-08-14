@@ -6,7 +6,7 @@
 //   → UI 側はこの cookie / localStorage をチェックしてロック解除
 // ============================================================
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { recordLead, extractClientInfo } from "@/lib/leads";
 import { notifyLead } from "@/lib/notify";
 import { LINE_VERIFIED_COOKIE, LINE_VERIFIED_VALUE } from "@/lib/line";
@@ -30,36 +30,42 @@ export async function POST(req: NextRequest) {
     ? body.username
     : null;
 
-  recordLead({
-    kind: "line_click",
-    queryUsername: safeUsername,
-    sessionId: info.sessionId,
-    ip: info.ip,
-    userAgent: info.userAgent,
-    referrer: info.referrer,
-    utmSource: info.utmSource,
-    utmMedium: info.utmMedium,
-    utmCampaign: info.utmCampaign,
-    utmContent: info.utmContent,
-    utmTerm: info.utmTerm,
-    landingPath: info.landingPath,
-  }).catch(() => {});
+  // after() でレスポンス後に実行する。単に呼び捨てると、レスポンス返却後に
+  // Lambda が凍結されて insert が完了しないことがある (リードの取りこぼし)。
+  after(() =>
+    recordLead({
+      kind: "line_click",
+      queryUsername: safeUsername,
+      sessionId: info.sessionId,
+      ip: info.ip,
+      userAgent: info.userAgent,
+      referrer: info.referrer,
+      utmSource: info.utmSource,
+      utmMedium: info.utmMedium,
+      utmCampaign: info.utmCampaign,
+      utmContent: info.utmContent,
+      utmTerm: info.utmTerm,
+      landingPath: info.landingPath,
+    }).catch(() => {}),
+  );
 
   // 高価値イベント: Slack 通知を送る。弁護士事務所の担当者が
   // LINE トークに新着が来る前に把握できるように。
-  notifyLead({
-    kind: "line_click",
-    queryUsername: safeUsername,
-    sessionId: info.sessionId,
-    ip: info.ip,
-    userAgent: info.userAgent,
-    utmSource: info.utmSource,
-    utmMedium: info.utmMedium,
-    utmCampaign: info.utmCampaign,
-    utmContent: info.utmContent,
-    utmTerm: info.utmTerm,
-    landingPath: info.landingPath,
-  }).catch(() => {});
+  after(() =>
+    notifyLead({
+      kind: "line_click",
+      queryUsername: safeUsername,
+      sessionId: info.sessionId,
+      ip: info.ip,
+      userAgent: info.userAgent,
+      utmSource: info.utmSource,
+      utmMedium: info.utmMedium,
+      utmCampaign: info.utmCampaign,
+      utmContent: info.utmContent,
+      utmTerm: info.utmTerm,
+      landingPath: info.landingPath,
+    }).catch(() => {}),
+  );
 
   const res = NextResponse.json({ ok: true });
   res.cookies.set(LINE_VERIFIED_COOKIE, LINE_VERIFIED_VALUE, {

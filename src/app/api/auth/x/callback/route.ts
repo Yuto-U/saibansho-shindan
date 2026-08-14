@@ -7,7 +7,7 @@
 // クライアントが「連携済み」を判定できるようにする。
 // ============================================================
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import {
   exchangeCodeForToken,
   fetchXMe,
@@ -78,32 +78,38 @@ export async function GET(req: NextRequest) {
   // query_username = 診断対象 (本人/第三者判定の基準)
   // x_user_id / x_username = 認証された診断者の X 情報
   const info = extractClientInfo(req);
-  recordLead({
-    kind: "x_oauth",
-    queryUsername: diagnoseTarget,
-    sessionId: info.sessionId,
-    xUserId,
-    xUsername,
-    ip: info.ip,
-    userAgent: info.userAgent,
-    referrer: info.referrer,
-    utmSource: info.utmSource,
-    utmMedium: info.utmMedium,
-    utmCampaign: info.utmCampaign,
-    utmContent: info.utmContent,
-    utmTerm: info.utmTerm,
-    landingPath: info.landingPath,
-  }).catch(() => {});
+  // after() でレスポンス後に実行する。単に呼び捨てると、レスポンス返却後に
+  // Lambda が凍結されて insert が完了しないことがある (リードの取りこぼし)。
+  after(() =>
+    recordLead({
+      kind: "x_oauth",
+      queryUsername: diagnoseTarget,
+      sessionId: info.sessionId,
+      xUserId,
+      xUsername,
+      ip: info.ip,
+      userAgent: info.userAgent,
+      referrer: info.referrer,
+      utmSource: info.utmSource,
+      utmMedium: info.utmMedium,
+      utmCampaign: info.utmCampaign,
+      utmContent: info.utmContent,
+      utmTerm: info.utmTerm,
+      landingPath: info.landingPath,
+    }).catch(() => {}),
+  );
 
-  notifyLead({
-    kind: "x_oauth",
-    queryUsername: diagnoseTarget,
-    sessionId: info.sessionId,
-    ip: info.ip,
-    userAgent: info.userAgent,
-    utmSource: info.utmSource,
-    utmCampaign: info.utmCampaign,
-  }).catch(() => {});
+  after(() =>
+    notifyLead({
+      kind: "x_oauth",
+      queryUsername: diagnoseTarget,
+      sessionId: info.sessionId,
+      ip: info.ip,
+      userAgent: info.userAgent,
+      utmSource: info.utmSource,
+      utmCampaign: info.utmCampaign,
+    }).catch(() => {}),
+  );
 
   // ----- Redirect back and set client cookie -----
   const finalUrl = new URL(returnTo, url.origin);

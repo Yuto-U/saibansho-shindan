@@ -210,7 +210,17 @@ Supabase Free plan は一定期間 DB アクセスが無いとプロジェクト
 2. `Resume project` → 数分〜で復旧（データは保持される）
 3. 上限エラーが出る場合は、他プロジェクトを pause / 削除する、所属組織での自分のロールを Developer に下げる、
    または該当組織を Pro（$25/月）にアップグレードする
-4. 復旧後に `/api/cron/keep-alive` を叩き `{"ok":true}` を確認
+4. **Vercel を再デプロイする（必須）**。Resume だけでは直らない。稼働中の Lambda インスタンスが
+   停止中の Supabase への死んだ接続を保持し続けるため、書き込みが `TypeError: fetch failed` のまま失敗し続ける。
+   2026-08-13 の復旧時、Resume から約3時間ぶんの診断がこれで失われた
+5. 復旧後に `/api/cron/keep-alive` を叩き `{"ok":true}` を確認
+6. `select max(created_at) from leads;` で実際に書き込みが再開したかを確認する
+   （keep-alive は read のみなので、read が通っても write が通るとは限らない）
+
+## 補足: リードは fire-and-forget で記録される
+`recordLead()` は await されずに呼ばれるため、単発アクセスでは Lambda 凍結により insert が
+完了しないことがある（次の呼び出しで解凍された時に完了する）。疎通確認の際は
+「1回叩いて入らない＝壊れている」と即断しないこと。
 
 ## 再発防止
 - `vercel.json` の cron で `/api/cron/keep-alive` を毎日 03:00 UTC（12:00 JST）に実行し、無操作による自動停止を防ぐ

@@ -8,7 +8,7 @@
 // 初回呼び出し時に kaiji_sid cookie を発行する。
 // ============================================================
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { diagnose, DiagnoseConfigError } from "@/lib/diagnose";
 import type { DiagnosisResponse } from "@/lib/diagnose-types";
 import { recordLead, extractClientInfo } from "@/lib/leads";
@@ -95,20 +95,24 @@ export async function GET(
     // 診断成功時のみリード記録 (X 上に存在しない / 取得失敗のものを B2B 資産に混ぜない)。
     // mock リクエストも記録しない (架空の診断データのため)。
     if (!forceMock) {
-      recordLead({
-        kind: "diagnose",
-        queryUsername: normalizedUsername,
-        sessionId: sid,
-        ip: info.ip,
-        userAgent: info.userAgent,
-        referrer: info.referrer,
-        utmSource: info.utmSource,
-        utmMedium: info.utmMedium,
-        utmCampaign: info.utmCampaign,
-        utmContent: info.utmContent,
-        utmTerm: info.utmTerm,
-        landingPath: info.landingPath,
-      }).catch(() => {});
+      // after() でレスポンス後に実行する。単に呼び捨てると、レスポンス返却後に
+      // Lambda が凍結されて insert が完了しないことがある (リードの取りこぼし)。
+      after(() =>
+        recordLead({
+          kind: "diagnose",
+          queryUsername: normalizedUsername,
+          sessionId: sid,
+          ip: info.ip,
+          userAgent: info.userAgent,
+          referrer: info.referrer,
+          utmSource: info.utmSource,
+          utmMedium: info.utmMedium,
+          utmCampaign: info.utmCampaign,
+          utmContent: info.utmContent,
+          utmTerm: info.utmTerm,
+          landingPath: info.landingPath,
+        }).catch(() => {}),
+      );
     }
 
     const res = NextResponse.json({ ok: true, data });

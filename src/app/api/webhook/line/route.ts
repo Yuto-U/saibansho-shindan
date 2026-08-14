@@ -7,7 +7,7 @@
 //   - その他は無視
 // ============================================================
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import {
   buildFollowMessages,
   buildGenericGreetingMessages,
@@ -98,20 +98,26 @@ async function handleEvent(event: LineEvent) {
   }
 
   // Track the registration in leads for the admin dashboard.
-  recordLead({
-    kind: "line_registered",
-    queryUsername: safePendingUsername,
-    sessionId: null,
-    lineUserId: userId,
-  }).catch(() => {});
+  // after() でレスポンス後に実行する。単に呼び捨てると、レスポンス返却後に
+  // Lambda が凍結されて insert が完了しないことがある (リードの取りこぼし)。
+  after(() =>
+    recordLead({
+      kind: "line_registered",
+      queryUsername: safePendingUsername,
+      sessionId: null,
+      lineUserId: userId,
+    }).catch(() => {}),
+  );
 
   // 最重要イベント (友だち追加完了) は Slack 通知も飛ばす。
   // 弁護士事務所の担当者が即時把握できるよう、line_click と同じ通知導線に乗せる。
-  notifyLead({
-    kind: "line_registered",
-    queryUsername: safePendingUsername,
-    sessionId: null,
-  }).catch(() => {});
+  after(() =>
+    notifyLead({
+      kind: "line_registered",
+      queryUsername: safePendingUsername,
+      sessionId: null,
+    }).catch(() => {}),
+  );
 
   // Cleanup the pending link after successful delivery — kind に依らず削除。
   // 残しておくと再 follow 時に古い対象で再送される / TTL 任せでテーブルが
